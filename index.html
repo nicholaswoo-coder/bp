@@ -1,0 +1,110 @@
+<!-- ... existing code ... -->
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- BP Line Chart -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="font-bold text-slate-800" data-i18n="chart_bp_title">Blood Pressure Trends</h2>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium" data-i18n="chart_bp_sub">Daily Range / Avg HR</span>
+                    </div>
+
+                    <div class="relative flex-grow" style="min-height: 300px;">
+                        <canvas id="bpChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown Donut -->
+<!-- ... existing code ... -->
+            const dailyLabels = dailyArray.map(d => d.date.substring(5)); // Format as MM-DD
+
+            // 1. Blood Pressure Daily Range & Heart Rate Mixed Chart
+            if (charts.bp) charts.bp.destroy();
+            const ctxBp = document.getElementById('bpChart').getContext('2d');
+            charts.bp = new Chart(ctxBp, {
+                type: 'bar',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: i18n[currentLang]['bp_range'],
+                            data: dailyArray.map(d => [d.diaMin, d.sysMax]),
+                            backgroundColor: dailyArray.map(d => catColors[d.maxCat]),
+                            borderColor: dailyArray.map(d => catBorderColors[d.maxCat]),
+                            borderWidth: 1.5,
+                            borderRadius: 8,
+                            barPercentage: 0.5,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: i18n[currentLang]['avg_hr'],
+                            data: dailyArray.map(d => Math.round(d.hrTotal / d.count)),
+                            borderColor: '#64748b', // Slate gray to not blend in with colored bars
+                            backgroundColor: '#64748b',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.3,
+                            pointBackgroundColor: '#64748b',
+                            yAxisID: 'y1'
+                        },
+                        // Garmin Category Legend Items (Added directly into the chart legend)
+                        { type: 'bar', label: i18n[currentLang]['cat_normal'], backgroundColor: catColors['Normal'], data: [] },
+                        { type: 'bar', label: i18n[currentLang]['cat_high_normal'], backgroundColor: catColors['Hoch-Normal'], data: [] },
+                        { type: 'bar', label: i18n[currentLang]['cat_grade1'], backgroundColor: catColors['Grad 1'], data: [] },
+                        { type: 'bar', label: i18n[currentLang]['cat_grade2'], backgroundColor: catColors['Grad 2'], data: [] }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        y: { 
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            min: 50, 
+                            max: 170,
+                            title: { display: true, text: 'mmHg', color: '#64748b', font: {size: 10} }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 40,
+                            max: 120,
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'bpm', color: '#64748b', font: {size: 10} }
+                        }
+                    },
+                    plugins: { 
+                        legend: { 
+                            position: 'top', 
+                            labels: { boxWidth: 12, font: { weight: 'bold' } },
+                            onClick: function(e, legendItem, legend) {
+                                // Only allow toggling the actual line/bar datasets, ignore clicks on dummy legend categories
+                                const index = legendItem.datasetIndex;
+                                if (index === 0 || index === 1) {
+                                    Chart.defaults.plugins.legend.onClick.call(this, e, legendItem, legend);
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.datasetIndex > 1) return null; // Hide tooltips for dummy category datasets
+                                    if (context.dataset.type === 'bar' && context.datasetIndex === 0) {
+                                        const d = dailyArray[context.dataIndex];
+                                        const lblRange = i18n[currentLang]['range_lbl'];
+                                        return `${lblRange}: ${d.sysMax}/${d.diaMin} (Sys Max: ${d.sysMax}, Dia Min: ${d.diaMin})`;
+                                    }
+                                    return `${context.dataset.label}: ${context.raw}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. Heart Rate Bar Chart
+<!-- ... existing code ... -->
