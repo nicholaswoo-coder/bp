@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased pb-16">
+
+    <!-- Top Navigation / Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-sm">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900" data-i18n="app_title">Health Tracker</h1>
+                    <p class="text-xs text-slate-500" data-i18n="app_desc">Blood Pressure & Heart Rate Overview</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 text-sm">
+                <button onclick="toggleLanguage()" id="btn-lang" class="px-3 py-1.5 rounded-md border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition shadow-sm">DE</button>
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="px-4 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition" data-i18n="tab_dash">Dashboard</button>
+                <button onclick="switchTab('manage')" id="btn-manage" class="px-4 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition" data-i18n="tab_manage">Add & Export Data</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+
+        <!-- DASHBOARD VIEW -->
+        <div id="view-dashboard" class="space-y-8">
+            
+            <!-- Quick Stats Row -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider" data-i18n="stat_sys">Avg Systolic</span>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span id="stat-sys" class="text-3xl font-extrabold text-indigo-600">--</span>
+                        <span class="text-sm font-medium text-slate-500">mmHg</span>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider" data-i18n="stat_dia">Avg Diastolic</span>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span id="stat-dia" class="text-3xl font-extrabold text-teal-600">--</span>
+                        <span class="text-sm font-medium text-slate-500">mmHg</span>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider" data-i18n="stat_hr">Avg Heart Rate</span>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span id="stat-hr" class="text-3xl font-extrabold text-rose-600">--</span>
+                        <span class="text-sm font-medium text-slate-500">bpm</span>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider" data-i18n="stat_count">Total Readings</span>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span id="stat-count" class="text-3xl font-extrabold text-slate-800">--</span>
+                        <span class="text-sm font-medium text-slate-500" data-i18n="lbl_entries">entries</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- BP Line Chart -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="font-bold text-slate-800" data-i18n="chart_bp_title">Blood Pressure Trends</h2>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium" data-i18n="chart_bp_sub">Daily Range / Avg HR</span>
+                    </div>
+
+                    <div class="relative flex-grow" style="min-height: 300px;">
+                        <canvas id="bpChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown Donut -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <h2 class="font-bold text-slate-800 mb-4" data-i18n="chart_cat_title">ISH Classification</h2>
+                    <div class="relative flex-grow flex items-center justify-center" style="min-height: 300px;">
+                        <canvas id="catChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Heart Rate Chart & Latest Table Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- HR Bar Chart -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <h2 class="font-bold text-slate-800 mb-4" data-i18n="chart_hr_title">Heart Rate (bpm)</h2>
+                    <div class="relative flex-grow" style="min-height: 250px;">
+                        <canvas id="hrChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent History Table -->
+                <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                        <h2 class="font-bold text-slate-800" data-i18n="log_title">Measurement Log</h2>
+                        <button onclick="switchTab('manage')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800" data-i18n="btn_add_entry">Add Entry &rarr;</button>
+                    </div>
+                    <div class="overflow-x-auto flex-grow">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-400 font-semibold text-xs uppercase tracking-wider border-b border-slate-100">
+                                    <th class="py-3 px-4" data-i18n="th_date">Date & Time</th>
+                                    <th class="py-3 px-4" data-i18n="th_bp">BP (mmHg)</th>
+                                    <th class="py-3 px-4" data-i18n="th_hr">Heart Rate</th>
+                                    <th class="py-3 px-4" data-i18n="th_cat">Category</th>
+                                    <th class="py-3 px-4" data-i18n="th_note">Notes</th>
+                                    <th class="py-3 px-4 text-right" data-i18n="th_act">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body" class="divide-y divide-slate-100 text-sm font-medium text-slate-600">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- MANAGE / DATA IMPORT VIEW (Hidden by default) -->
+        <div id="view-manage" class="hidden space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- Add New Entry Form -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4" data-i18n="form_title">Log New Measurement</h2>
+                    <form id="add-form" class="space-y-4" onsubmit="addMeasurement(event)">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1" data-i18n="lbl_date">Date</label>
+                                <input type="date" id="input-date" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1" data-i18n="lbl_time">Time</label>
+                                <input type="time" id="input-time" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1" data-i18n="lbl_sys">Systolic</label>
+                                <input type="number" id="input-sys" placeholder="120" required min="50" max="250" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1" data-i18n="lbl_dia">Diastolic</label>
+                                <input type="number" id="input-dia" placeholder="80" required min="30" max="150" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1" data-i18n="th_hr">Heart Rate</label>
+                                <input type="number" id="input-hr" placeholder="72" required min="30" max="200" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1" data-i18n="lbl_note">Notes (Optional)</label>
+                            <input type="text" id="input-notes" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <button type="submit" class="w-full mt-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm transition" data-i18n="btn_save">Save Measurement</button>
+                    </form>
+                </div>
+
+                <!-- Backup & Restore JSON -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <h2 class="text-lg font-bold text-slate-900 mb-2" data-i18n="export_title">Data Backup & Raw JSON</h2>
+                    <p class="text-xs text-slate-500 mb-4" data-i18n="export_desc">Because this app runs securely in your browser, your records live in Local Storage. Export your records to back them up, or paste a JSON array below to override.</p>
+                    <textarea id="json-area" class="w-full flex-grow p-3 font-mono text-xs bg-slate-900 text-slate-100 rounded-lg focus:outline-none" rows="8"></textarea>
+                    <div class="flex gap-3 mt-4">
+                        <button onclick="importJSON()" class="flex-1 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition text-sm" data-i18n="btn_import">Import / Override</button>
+                        <button onclick="resetToDefault()" class="py-2 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg transition text-sm" data-i18n="btn_reset">Reset to PDF Data</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Application Script -->
+    <script>
+        // Sample predefined data matching the Garmin PDF
+        const initialGarminData = [
+            { id: 1, date: "2026-06-21", time: "18:32", sys: 124, dia: 79, hr: 78, category: "Normal", notes: "" },
+            { id: 2, date: "2026-06-21", time: "18:30", sys: 133, dia: 81, hr: 74, category: "Hoch-Normal", notes: "" },
+            { id: 3, date: "2026-06-21", time: "18:25", sys: 117, dia: 80, hr: 72, category: "Normal", notes: "Direkt nach dem aufstehen. Tablette vor 4 Stunden genommen." },
+            { id: 4, date: "2026-06-20", time: "12:06", sys: 139, dia: 88, hr: 71, category: "Hoch-Normal", notes: "" },
+            { id: 5, date: "2026-06-19", time: "22:58", sys: 129, dia: 84, hr: 80, category: "Normal", notes: "" },
+            { id: 6, date: "2026-06-19", time: "16:54", sys: 132, dia: 85, hr: 82, category: "Hoch-Normal", notes: "" },
+            { id: 7, date: "2026-06-19", time: "13:30", sys: 138, dia: 85, hr: 78, category: "Hoch-Normal", notes: "" },
+            { id: 8, date: "2026-06-19", time: "09:39", sys: 120, dia: 89, hr: 83, category: "Hoch-Normal", notes: "" },
+            { id: 9, date: "2026-06-19", time: "08:27", sys: 136, dia: 88, hr: 77, category: "Hoch-Normal", notes: "" },
+            { id: 10, date: "2026-06-18", time: "23:27", sys: 129, dia: 88, hr: 72, category: "Hoch-Normal", notes: "" },
+            { id: 11, date: "2026-06-18", time: "19:54", sys: 144, dia: 96, hr: 82, category: "Grad 1", notes: "" },
+            { id: 12, date: "2026-06-18", time: "18:27", sys: 134, dia: 93, hr: 72, category: "Grad 1", notes: "" },
+            { id: 13, date: "2026-06-18", time: "07:45", sys: 134, dia: 85, hr: 67, category: "Hoch-Normal", notes: "" },
+            { id: 14, date: "2026-06-18", time: "07:41", sys: 130, dia: 76, hr: 68, category: "Hoch-Normal", notes: "" },
+            { id: 15, date: "2026-06-17", time: "21:04", sys: 133, dia: 86, hr: 71, category: "Hoch-Normal", notes: "" },
+            { id: 16, date: "2026-06-17", time: "12:16", sys: 130, dia: 81, hr: 73, category: "Hoch-Normal", notes: "Nach Einnahme der Tablette" },
+            { id: 17, date: "2026-06-17", time: "09:02", sys: 137, dia: 91, hr: 71, category: "Grad 1", notes: "Wenig geschlafen" },
+            { id: 18, date: "2026-06-16", time: "07:10", sys: 126, dia: 85, hr: 76, category: "Hoch-Normal", notes: "" },
+            { id: 19, date: "2026-06-15", time: "21:27", sys: 127, dia: 94, hr: 81, category: "Grad 1", notes: "" },
+            { id: 20, date: "2026-06-15", time: "08:19", sys: 128, dia: 99, hr: 84, category: "Grad 1", notes: "" },
+            { id: 21, date: "2026-06-14", time: "14:28", sys: 125, dia: 86, hr: 89, category: "Hoch-Normal", notes: "" },
+            { id: 22, date: "2026-06-14", time: "06:56", sys: 128, dia: 85, hr: 68, category: "Hoch-Normal", notes: "" },
+            { id: 23, date: "2026-06-13", time: "19:18", sys: 127, dia: 86, hr: 75, category: "Hoch-Normal", notes: "" },
+            { id: 24, date: "2026-06-13", time: "14:39", sys: 135, dia: 85, hr: 75, category: "Hoch-Normal", notes: "" },
+            { id: 25, date: "2026-06-13", time: "09:10", sys: 136, dia: 84, hr: 82, category: "Hoch-Normal", notes: "" }
+        ];
+
+        let bpRecords = [];
+        let charts = { bp: null, cat: null, hr: null };
+        let currentLang = 'en';
+
+        // Translation Dictionary
+        const i18n = {
+            en: {
+                app_title: "Health Tracker", app_desc: "Blood Pressure & Heart Rate Overview",
+                tab_dash: "Dashboard", tab_manage: "Add & Export Data",
+                stat_sys: "Avg Systolic", stat_dia: "Avg Diastolic", stat_hr: "Avg Heart Rate", stat_count: "Total Readings",
+                lbl_entries: "entries", chart_bp_title: "Blood Pressure Trends", chart_bp_sub: "Daily Range / Avg HR",
+                chart_cat_title: "ISH Classification", chart_hr_title: "Heart Rate (bpm)", log_title: "Measurement Log",
+                btn_add_entry: "Add Entry &rarr;", th_date: "Date & Time", th_bp: "BP (mmHg)", th_hr: "Heart Rate",
+                th_cat: "Category", th_note: "Notes", th_act: "Action", form_title: "Log New Measurement",
+                lbl_date: "Date", lbl_time: "Time", lbl_sys: "Systolic", lbl_dia: "Diastolic", lbl_note: "Notes (Optional)",
+                btn_save: "Save Measurement", export_title: "Data Backup & Raw JSON",
+                export_desc: "Because this app runs securely in your browser, your records live in Local Storage. Export your records to back them up, or paste a JSON array below to override.",
+                btn_import: "Import / Override", btn_reset: "Reset to PDF Data", bp_range: "BP Range (mmHg)",
+                avg_hr: "Avg Heart Rate (bpm)", range_lbl: "Range",
+                cat_normal: "Normal", cat_high_normal: "High-Normal", cat_grade1: "Grade 1", cat_grade2: "Grade 2"
+            },
+            de: {
+                app_title: "Gesundheits-Tracker", app_desc: "Blutdruck & Herzfrequenz Übersicht",
+                tab_dash: "Dashboard", tab_manage: "Daten verwalten",
+                stat_sys: "Ø Systolisch", stat_dia: "Ø Diastolisch", stat_hr: "Ø Herzfrequenz", stat_count: "Gesamtmessungen",
+                lbl_entries: "Einträge", chart_bp_title: "Blutdruck-Trends", chart_bp_sub: "Tagesbereich / Ø HF",
+                chart_cat_title: "ISH Klassifikation", chart_hr_title: "Herzfrequenz (bpm)", log_title: "Messprotokoll",
+                btn_add_entry: "Eintrag hinzufügen &rarr;", th_date: "Datum & Zeit", th_bp: "BD (mmHg)", th_hr: "Herzfrequenz",
+                th_cat: "Kategorie", th_note: "Notizen", th_act: "Aktion", form_title: "Neue Messung eintragen",
+                lbl_date: "Datum", lbl_time: "Zeit", lbl_sys: "Systolisch", lbl_dia: "Diastolisch", lbl_note: "Notizen (Optional)",
+                btn_save: "Messung speichern", export_title: "Datensicherung & Raw JSON",
+                export_desc: "Da diese App sicher im Browser läuft, werden Ihre Daten lokal gespeichert. Exportieren Sie Ihre Daten als Backup oder fügen Sie ein JSON-Array ein, um sie zu überschreiben.",
+                btn_import: "Importieren / Überschreiben", btn_reset: "Auf PDF-Daten zurücksetzen", bp_range: "BD Bereich (mmHg)",
+                avg_hr: "Ø Herzfrequenz (bpm)", range_lbl: "Bereich",
+                cat_normal: "Normal", cat_high_normal: "Hoch-Normal", cat_grade1: "Grad 1", cat_grade2: "Grad 2"
+            }
+        };
+
+        // Category Translations
+        const catNames = {
+            en: { "Normal": "Normal", "Hoch-Normal": "High-Normal", "Grad 1": "Grade 1", "Grad 2": "Grade 2" },
+            de: { "Normal": "Normal", "Hoch-Normal": "Hoch-Normal", "Grad 1": "Grad 1", "Grad 2": "Grad 2" }
+        };
+
+        function switchTab(tabId) {
+            if (tabId === 'dashboard') {
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                document.getElementById('view-manage').classList.add('hidden');
+                document.getElementById('btn-dashboard').className = "px-4 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition";
+                document.getElementById('btn-manage').className = "px-4 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition";
+            } else {
+                document.getElementById('view-manage').classList.remove('hidden');
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('btn-manage').className = "px-4 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition";
+                document.getElementById('btn-dashboard').className = "px-4 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition";
+            }
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'de' : 'en';
+            document.getElementById('btn-lang').innerText = currentLang === 'en' ? 'DE' : 'EN';
+            applyTranslations();
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) {
+                    el.innerHTML = i18n[currentLang][key];
+                }
+            });
+            updateInterface();
+        }
+
+        // ISH Classification Logic
+        function calculateCategory(sys, dia) {
+            if (sys >= 160 || dia >= 100) return "Grad 2";
+            if (sys >= 140 || dia >= 90) return "Grad 1";
+            if (sys >= 130 || dia >= 85) return "Hoch-Normal";
+            return "Normal";
+        }
+
+        // Initialize App
+        function initApp() {
+            const saved = localStorage.getItem('garmin_bp_data');
+            if (saved) {
+                try { bpRecords = JSON.parse(saved); } catch (e) { bpRecords = [...initialGarminData]; }
+            } else {
+                bpRecords = [...initialGarminData];
+                saveData();
+            }
+
+            // Set default date/time in form
+            const now = new Date();
+            document.getElementById('input-date').value = now.toISOString().split('T')[0];
+            document.getElementById('input-time').value = now.toTimeString().split(' ')[0].substring(0, 5);
+
+            applyTranslations(); // This automatically calls updateInterface()
+        }
+
+        function saveData() {
+            localStorage.setItem('garmin_bp_data', JSON.stringify(bpRecords));
+        }
+
+        function updateInterface() {
+            document.getElementById('json-area').value = JSON.stringify(bpRecords, null, 2);
+            renderStats();
+            renderTable();
+            renderCharts();
+        }
+
+        function renderStats() {
+            if (bpRecords.length === 0) {
+                document.getElementById('stat-sys').innerText = '--';
+                document.getElementById('stat-dia').innerText = '--';
+                document.getElementById('stat-hr').innerText = '--';
+                document.getElementById('stat-count').innerText = '0';
+                return;
+            }
+
+            const totalSys = bpRecords.reduce((sum, r) => sum + parseInt(r.sys), 0);
+            const totalDia = bpRecords.reduce((sum, r) => sum + parseInt(r.dia), 0);
+            const totalHr = bpRecords.reduce((sum, r) => sum + parseInt(r.hr), 0);
+            const count = bpRecords.length;
+
+            document.getElementById('stat-sys').innerText = Math.round(totalSys / count);
+            document.getElementById('stat-dia').innerText = Math.round(totalDia / count);
+            document.getElementById('stat-hr').innerText = Math.round(totalHr / count);
+            document.getElementById('stat-count').innerText = count;
+        }
+
+        function addMeasurement(event) {
+            event.preventDefault();
+            const date = document.getElementById('input-date').value;
+            const time = document.getElementById('input-time').value;
+            const sys = parseInt(document.getElementById('input-sys').value);
+            const dia = parseInt(document.getElementById('input-dia').value);
+            const hr = parseInt(document.getElementById('input-hr').value);
+            const notes = document.getElementById('input-notes').value;
+
+            const newRecord = {
+                id: Date.now(),
+                date,
+                time,
+                sys,
+                dia,
+                hr,
+                category: calculateCategory(sys, dia),
+                notes
+            };
+
+            bpRecords.push(newRecord);
+            saveData();
+            updateInterface();
+            
+            // Reset form partly, keeping date/time current
+            document.getElementById('input-sys').value = '';
+            document.getElementById('input-dia').value = '';
+            document.getElementById('input-hr').value = '';
+            document.getElementById('input-notes').value = '';
+            
+            // Switch back to dashboard to see new data
+            switchTab('dashboard');
+        }
+
+        function deleteRecord(id) {
+            bpRecords = bpRecords.filter(r => r.id !== id);
+            saveData();
+            updateInterface();
+        }
+
+        function resetToDefault() {
+            bpRecords = [...initialGarminData];
+            saveData();
+            updateInterface();
+        }
+
+        function importJSON() {
+            try {
+                const inputData = document.getElementById('json-area').value;
+                const parsedData = JSON.parse(inputData);
+                if (Array.isArray(parsedData)) {
+                    bpRecords = parsedData;
+                    saveData();
+                    updateInterface();
+                }
+            } catch (error) {
+                console.error("Invalid JSON input");
+            }
+        }
+
+        // Render History Table
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            // Sort newest first for the table
+            const sorted = [...bpRecords].sort((a, b) => new Date(`${b.date} ${b.time}`) - new Date(`${a.date} ${a.time}`));
+
+            sorted.forEach(row => {
+                let badgeStyle = "bg-green-100 text-green-800";
+                if (row.category === "Hoch-Normal") badgeStyle = "bg-amber-100 text-amber-800";
+                if (row.category === "Grad 1") badgeStyle = "bg-orange-100 text-orange-800";
+                if (row.category === "Grad 2") badgeStyle = "bg-red-100 text-red-800";
+
+                const localizedCat = catNames[currentLang][row.category] || row.category;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-medium text-slate-800 whitespace-nowrap">${row.date} <span class="text-xs text-slate-400 ml-1">${row.time}</span></td>
+                    <td class="py-3 px-4 font-bold text-slate-800">${row.sys} <span class="text-xs font-normal text-slate-400">/ ${row.dia}</span></td>
+                    <td class="py-3 px-4">${row.hr} bpm</td>
+                    <td class="py-3 px-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeStyle}">${localizedCat}</span></td>
+                    <td class="py-3 px-4 text-xs text-slate-500 max-w-xs truncate">${row.notes || '--'}</td>
+                    <td class="py-3 px-4 text-right"><button onclick="deleteRecord(${row.id})" class="text-slate-300 hover:text-rose-600 transition font-bold text-lg">&times;</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render Chart.js Visualizations
+        function renderCharts() {
+            // Sort oldest first for chronological left-to-right plotting
+            const chrono = [...bpRecords].sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+            
+            // Color mapping arrays
+            const catWeights = { "Normal": 0, "Hoch-Normal": 1, "Grad 1": 2, "Grad 2": 3 };
+            const catColors = { 
+                "Normal": "rgba(16, 185, 129, 0.85)",     // Green
+                "Hoch-Normal": "rgba(245, 158, 11, 0.85)", // Amber
+                "Grad 1": "rgba(249, 115, 22, 0.85)",      // Orange
+                "Grad 2": "rgba(239, 68, 68, 0.85)"        // Red
+            };
+            const catBorderColors = { 
+                "Normal": "#10b981", 
+                "Hoch-Normal": "#f59e0b", 
+                "Grad 1": "#f97316", 
+                "Grad 2": "#ef4444" 
+            };
+
+            // Group data by day for daily ranges
+            const dailyDataMap = {};
+            chrono.forEach(r => {
+                if (!dailyDataMap[r.date]) {
+                    dailyDataMap[r.date] = { 
+                        date: r.date, 
+                        sysMax: r.sys, sysMin: r.sys, 
+                        diaMax: r.dia, diaMin: r.dia, 
+                        hrTotal: r.hr, count: 1,
+                        maxCat: r.category 
+                    };
+                } else {
+                    dailyDataMap[r.date].sysMax = Math.max(dailyDataMap[r.date].sysMax, r.sys);
+                    dailyDataMap[r.date].sysMin = Math.min(dailyDataMap[r.date].sysMin, r.sys);
+                    dailyDataMap[r.date].diaMax = Math.max(dailyDataMap[r.date].diaMax, r.dia);
+                    dailyDataMap[r.date].diaMin = Math.min(dailyDataMap[r.date].diaMin, r.dia);
+                    dailyDataMap[r.date].hrTotal += r.hr;
+                    dailyDataMap[r.date].count += 1;
+                    
+                    // Always show the highest risk category color for the whole day
+                    if (catWeights[r.category] > catWeights[dailyDataMap[r.date].maxCat]) {
+                        dailyDataMap[r.date].maxCat = r.category;
+                    }
+                }
+            });
+
+            const dailyArray = Object.values(dailyDataMap);
+            const dailyLabels = dailyArray.map(d => d.date.substring(5)); // Format as MM-DD
+
+            // 1. Blood Pressure Daily Range & Heart Rate Mixed Chart
+            if (charts.bp) charts.bp.destroy();
+            const ctxBp = document.getElementById('bpChart').getContext('2d');
+            charts.bp = new Chart(ctxBp, {
+                type: 'bar',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: i18n[currentLang]['bp_range'],
+                            data: dailyArray.map(d => [d.diaMin, d.sysMax]),
+                            backgroundColor: dailyArray.map(d => catColors[d.maxCat]),
+                            borderColor: dailyArray.map(d => catBorderColors[d.maxCat]),
+                            borderWidth: 1.5,
+                            borderRadius: 8,
+                            barPercentage: 0.5,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: i18n[currentLang]['avg_hr'],
+                            data: dailyArray.map(d => Math.round(d.hrTotal / d.count)),
+                            borderColor: '#64748b', // Slate gray to not blend in with colored bars
+                            backgroundColor: '#64748b',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.3,
+                            pointBackgroundColor: '#64748b',
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        y: { 
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            min: 50, 
+                            max: 170,
+                            title: { display: true, text: 'mmHg', color: '#64748b', font: {size: 10} }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 40,
+                            max: 120,
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'bpm', color: '#64748b', font: {size: 10} }
+                        }
+                    },
+                    plugins: { 
+                        legend: { 
+                            position: 'top', 
+                            labels: { 
+                                boxWidth: 12, 
+                                font: { weight: 'bold' },
+                                // Dynamically append custom legend items without adding fake datasets
+                                generateLabels: function(chart) {
+                                    const originalLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                    const customLabels = [
+                                        { text: i18n[currentLang]['cat_normal'], fillStyle: catColors['Normal'], strokeStyle: catBorderColors['Normal'], lineWidth: 1, datasetIndex: -1 },
+                                        { text: i18n[currentLang]['cat_high_normal'], fillStyle: catColors['Hoch-Normal'], strokeStyle: catBorderColors['Hoch-Normal'], lineWidth: 1, datasetIndex: -1 },
+                                        { text: i18n[currentLang]['cat_grade1'], fillStyle: catColors['Grad 1'], strokeStyle: catBorderColors['Grad 1'], lineWidth: 1, datasetIndex: -1 },
+                                        { text: i18n[currentLang]['cat_grade2'], fillStyle: catColors['Grad 2'], strokeStyle: catBorderColors['Grad 2'], lineWidth: 1, datasetIndex: -1 }
+                                    ];
+                                    return originalLabels.concat(customLabels);
+                                }
+                            },
+                            onClick: function(e, legendItem, legend) {
+                                // Only process clicks for actual datasets (index 0 and 1)
+                                if (legendItem.datasetIndex !== -1) {
+                                    Chart.defaults.plugins.legend.onClick.call(this, e, legendItem, legend);
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataset.type === 'bar') {
+                                        const d = dailyArray[context.dataIndex];
+                                        const lblRange = i18n[currentLang]['range_lbl'];
+                                        return `${lblRange}: ${d.sysMax}/${d.diaMin} (Sys Max: ${d.sysMax}, Dia Min: ${d.diaMin})`;
+                                    }
+                                    return `${context.dataset.label}: ${context.raw}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. Heart Rate Bar Chart
+            if (charts.hr) charts.hr.destroy();
+            const ctxHr = document.getElementById('hrChart').getContext('2d');
+            charts.hr = new Chart(ctxHr, {
+                type: 'bar',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [{
+                        label: i18n[currentLang]['avg_hr'],
+                        data: dailyArray.map(d => Math.round(d.hrTotal / d.count)),
+                        backgroundColor: '#64748b', // Updated to match slate theme
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { min: 40, max: 110 } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // 3. Category Distribution Donut
+            if (charts.cat) charts.cat.destroy();
+            const counts = bpRecords.reduce((acc, curr) => { acc[curr.category] = (acc[curr.category] || 0) + 1; return acc; }, {});
+            
+            const catPalette = { "Normal": "#10b981", "Hoch-Normal": "#f59e0b", "Grad 1": "#f97316", "Grad 2": "#ef4444" };
+            const presentLabels = Object.keys(counts);
+
+            const ctxCat = document.getElementById('catChart').getContext('2d');
+            charts.cat = new Chart(ctxCat, {
+                type: 'doughnut',
+                data: {
+                    labels: presentLabels.map(k => catNames[currentLang][k]),
+                    datasets: [{
+                        data: presentLabels.map(k => counts[k]),
+                        backgroundColor: presentLabels.map(k => catPalette[k]),
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // Fire on page load
+        window.onload = initApp;
+    </script>
+</body>
+</html>
